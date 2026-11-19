@@ -1,0 +1,30 @@
+# 本地构建和缓存
+.pio/
+.venv/
+__pycache__/
+*.py[cod]
+firmware.map
+*.elf
+*.bin
+*.hex
+*.o
+*.a
+
+# 设备身份、整片备份和未筛选现场记录
+tools/local_config.json
+backups/
+local_history/
+exports/
+logs/*
+!logs/README.md
+!logs/INDEX.md
+!logs/latest_configuration.json
+
+# 未启用的历史USB组件，原件保留在本机
+optional_usb_cdc/
+
+# 编辑器和系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

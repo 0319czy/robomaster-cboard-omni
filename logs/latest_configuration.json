@@ -1,0 +1,50 @@
+{
+  "format_version": 2,
+  "board_firmware": {
+    "sha256": "5132a277eb1456089a3a09705c2683ff95cffa9623d9cf66858801c7b67fdb7f",
+    "deployed": true,
+    "flash_readback": "matched",
+    "matching_elf_backup": "backups/github_cleanup_2026-11-19T13-11-26.932Z/.pio/build/cboard_chassis/firmware.elf"
+  },
+  "source_build": {
+    "sha256": "69198bb5d62075a6e987dc8000ee94d66c26d96b8114cf84d8d0c1439d4bc147",
+    "deployed": false,
+    "reason": "整理格式/注释及历史诊断HAL读取；未再次烧录"
+  },
+  "parameters": {
+    "translation_max_mm_s": 450,
+    "sb_spin_mrad_s": 12566,
+    "spin_accel_mrad_s2": 20000,
+    "spin_decel_mrad_s2": 40000,
+    "translation_lead_ms": 30,
+    "translation_lead_max_rad": 0.45,
+    "current_limit_raw": 2457,
+    "target_rpm_limit": 8000,
+    "hard_overspeed_rpm": 9000,
+    "feedback_brake_max_ms": 1200
+  },
+  "validation": {
+    "host_control_tests": "passed",
+    "trace_tests": "passed",
+    "source_build": "passed",
+    "latest_motion": "logs/fast_capture_20261119_210206_246011.json",
+    "effective_sample_hz": 100,
+    "final_saved_state": 0,
+    "final_saved_fault": 0,
+    "final_saved_rpm": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "final_saved_queued_current": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "final_probe_check": "下载器不在线，未追加当前硬件读取",
+    "opposite_direction_retest": "用户结束调试，待命采集取消；未验收"
+  },
+  "capture_status": "host capture stopped; recorder frozen"
+}

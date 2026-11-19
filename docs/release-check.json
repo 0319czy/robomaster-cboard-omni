@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-19",
+  "board_firmware_sha256": "5132a277eb1456089a3a09705c2683ff95cffa9623d9cf66858801c7b67fdb7f",
+  "source_build_sha256": "69198bb5d62075a6e987dc8000ee94d66c26d96b8114cf84d8d0c1439d4bc147",
+  "source_deployed": false,
+  "checks": {
+    "control_host_tests": "passed",
+    "trace_state_machine_tests": "passed",
+    "control_build": "passed",
+    "zero_current_diagnostic_build": "passed",
+    "c_format": "passed",
+    "python_format": "passed",
+    "python_syntax": "passed",
+    "shell_syntax": "passed",
+    "markdown_local_links": "passed",
+    "public_path_and_device_identity_scan": "passed",
+    "sampled_data_archive_integrity": "passed",
+    "archived_analysis_reproduction": "passed",
+    "github_actions_remote_run": "not run",
+    "final_live_hardware_read": "probe unavailable; no new hardware acceptance"
+  },
+  "experiments": [
+    {
+      "name": "baseline_ccw",
+      "stable_samples": 325,
+      "direction_error_deg": 24.555128895781362,
+      "equivalent_delay_ms": 35
+    },
+    {
+      "name": "prediction_cw",
+      "stable_samples": 253,
+      "direction_error_deg": -3.8052805541924033,
+      "equivalent_delay_ms": 35
+    }
+  ],
+  "limitations": [
+    "两段旋向不同，不是严格同条件A/B试验",
+    "编码器逆解不等同真实地面轨迹",
+    "项目级许可证尚未选择",
+    "未创建远端仓库或推送"
+  ]
+}

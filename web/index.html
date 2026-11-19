@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>全向底盘 · 串口遥控</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c23; --line:#2a323d; --text:#e6edf3; --dim:#8b98a5;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149; --accent:#388bfd;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,"Noto Sans SC",sans-serif}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.5px}
+  .pill{padding:3px 10px;border-radius:20px;font-size:12px;border:1px solid var(--line)}
+  .pill.ok{color:#04140a;background:var(--ok);border-color:var(--ok)}
+  .pill.bad{color:#1a0000;background:var(--bad);border-color:var(--bad)}
+  .pill.dim{color:var(--dim)}
+  main{padding:20px;max-width:1080px;margin:0 auto;display:grid;gap:18px;grid-template-columns:340px 1fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h2{font-size:13px;margin:0 0 12px;color:var(--dim);font-weight:600;letter-spacing:.6px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .key{border:1px solid var(--line);border-radius:10px;padding:18px 0;text-align:center;background:#1b222b;transition:.06s;user-select:none}
+  .key .k{font-size:22px;font-weight:700;display:block}
+  .key .d{font-size:12px;color:var(--dim)}
+  .key.on{background:var(--accent);border-color:var(--accent);color:#fff;transform:scale(.97)}
+  .key.on .d{color:#dbe9ff}
+  .empty{visibility:hidden}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  label.sl{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+  input[type=range]{width:100%}
+  .val{float:right;color:var(--text);font-variant-numeric:tabular-nums}
+  pre{background:#0b0f14;border:1px solid var(--line);border-radius:8px;padding:10px;height:150px;overflow:auto;
+      font:12px/1.45 ui-monospace,monospace;color:#9fb3c8;margin:0;white-space:pre-wrap}
+  .note{color:var(--dim);font-size:12px;line-height:1.7}
+  .warn{color:var(--warn)}
+  .focusbad{outline:2px solid var(--bad);outline-offset:4px;border-radius:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>全向底盘 · 串口遥控</h1>
+  <span id="conn" class="pill bad">未连接串口</span>
+  <span id="focus" class="pill dim">焦点: 无</span>
+  <span id="sent" class="pill dim">发送 0</span>
+  <span class="pill dim">115200 8N1</span>
+</header>
+
+<main>
+  <section style="display:grid;gap:18px;align-content:start">
+    <div class="card">
+      <h2>串口连接</h2>
+      <div class="row">
+        <button id="connect">连接串口</button>
+        <button id="disconnect" class="ghost" disabled>断开</button>
+      </div>
+      <p class="note" style="margin-top:10px">先点“连接串口”，在弹窗里选 USB 转串口设备（如 /dev/ttyUSB0）。<br>
+      需要 Chrome / Edge，页面必须通过 http://127.0.0.1:8081 打开。</p>
+    </div>
+
+    <div class="card">
+      <h2>速度设定</h2>
+      <label class="sl">平移速度 <span class="val"><span id="tv">300</span> mm/s</span>
+        <input id="trans" type="range" min="100" max="800" step="50" value="300"></label>
+      <label class="sl">自旋角速度 <span class="val"><span id="sv">800</span> mrad/s</span>
+        <input id="spin" type="range" min="200" max="2000" step="100" value="800"></label>
+      <p class="note">平移 300 mm/s ≈ 轮轴 26 rpm；自旋 800 mrad/s ≈ 0.8 rad/s。</p>
+    </div>
+
+    <div class="card">
+      <h2>安全约束</h2>
+      <p class="note">
+        · 只有<b>本网页获得焦点</b>时才发命令；切走窗口/最小化立即停。<br>
+        · 按键<b>按住</b>才动，<b>抬起立刻发停止</b>。<br>
+        · 固件侧另有 150 ms 失联超时，命令一断立即制动。<br>
+        · 地面测试建议先 200~300 mm/s、场地 ≥1 m。
+      </p>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:18px;align-content:start">
+    <div class="card" id="padcard">
+      <h2>按住移动（同时按下可叠加）</h2>
+      <div class="keypad">
+        <div class="key empty"></div>
+        <div class="key" data-k="w"><span class="k">W</span><span class="d">前进</span></div>
+        <div class="key empty"></div>
+        <div class="key" data-k="a"><span class="k">A</span><span class="d">左平移</span></div>
+        <div class="key" data-k="s"><span class="k">S</span><span class="d">后退</span></div>
+        <div class="key" data-k="d"><span class="k">D</span><span class="d">右平移</span></div>
+        <div class="key" data-k="q"><span class="k">Q</span><span class="d">左旋转</span></div>
+        <div class="key empty"></div>
+        <div class="key" data-k="e"><span class="k">E</span><span class="d">右旋转</span></div>
+      </div>
+      <p class="note" style="margin-top:12px">当前命令：<code id="cmd">X</code></p>
+    </div>
+
+    <div class="card">
+      <h2>发送日志</h2>
+      <pre id="log"></pre>
+    </div>
+  </section>
+</main>
+
+<script>
+const KEYMAP = {w:'w', s:'s', a:'a', d:'d', q:'q', e:'e'};
+const keys = {w:false, s:false, a:false, d:false, q:false, e:false};
+let port = null, writer = null, reader = null, loop = null, sentCount = 0, sending = false, pendingStop = false;
+
+const $ = id => document.getElementById(id);
+const connPill = $('conn'), focusPill = $('focus'), sentPill = $('sent'), logEl = $('log'), cmdEl = $('cmd');
+const transEl = $('trans'), spinEl = $('spin');
+
+function log(line){
+  const t = new Date().toLocaleTimeString('zh-CN', {hour12:false});
+  logEl.textContent = `[${t}] ${line}\n` + logEl.textContent;
+  const lines = logEl.textContent.split('\n');
+  if (lines.length > 200) logEl.textContent = lines.slice(0,200).join('\n');
+}
+
+function focusedNow(){ return document.hasFocus() && !document.hidden; }
+
+function currentCmd(){
+  const t = Number(transEl.value), s = Number(spinEl.value);
+  let vx = 0, vy = 0, om = 0;
+  if (keys.w) vx += t;
+  if (keys.s) vx -= t;
+  if (keys.a) vy += t;      // 板子约定 +y 向左
+  if (keys.d) vy -= t;
+  if (keys.q) om += s;      // +omega = 逆时针 = 左旋转
+  if (keys.e) om -= s;
+  return {vx, vy, om};
+}
+function anyKey(){ return Object.values(keys).some(Boolean); }
+
+function paintKeys(){
+  document.querySelectorAll('.key[data-k]').forEach(el=>{
+    el.classList.toggle('on', !!keys[el.dataset.k]);
+  });
+  const c = currentCmd();
+  const active = (c.vx||c.vy||c.om) && focusedNow();
+  cmdEl.textContent = active ? `V,${c.vx},${c.vy},${c.om}` : (anyKey() ? 'X（未获得焦点，已强制停止）' : 'X');
+  $('padcard').classList.toggle('focusbad', anyKey() && !focusedNow());
+}
+
+async function send(text){
+  if (!writer || sending) { pendingStop = true; return; }
+  sending = true;
+  try {
+    await writer.write(new TextEncoder().encode(text));
+    sentCount++; sentPill.textContent = `发送 ${sentCount}`;
+  } catch (e) {
+    log('写入失败：' + e.message);
+  } finally {
+    sending = false;
+    if (pendingStop) { pendingStop = false; }
+  }
+}
+
+function stopNow(reason){
+  const had = anyKey();
+  for (const k in keys) keys[k] = false;
+  paintKeys();
+  if (writer) send('X\n');
+  if (reason && had) log('强制停止：' + reason);
+}
+
+async function connect(){
+  if (!('serial' in navigator)) { alert('此浏览器不支持 Web Serial，请用 Chrome / Edge'); return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    writer = port.writable.getWriter();
+    $('connect').disabled = true; $('disconnect').disabled = false;
+    connPill.textContent = '已连接 ' + (port.getInfo().usbVendorId
+        ? `VID:${port.getInfo().usbVendorId.toString(16)} PID:${port.getInfo().usbProductId.toString(16)}` : '');
+    connPill.className = 'pill ok';
+    log('串口已打开 115200 8N1');
+    // 读回（固件不发数据，仅用于感知断开）
+    reader = port.readable.getReader();
+    (async ()=>{ try { while (true) { const {value, done} = await reader.read(); if (done) break; if (value) log('接收 '+value.length+' 字节'); } }
+                 catch(e){} finally { try{reader.releaseLock();}catch(_){} } })();
+    loop = setInterval(tick, 40);
+    send('X\n');
+  } catch (e) {
+    log('打开失败：' + e.message);
+    connPill.textContent = '未连接串口'; connPill.className = 'pill bad';
+  }
+}
+
+async function disconnect(){
+  if (loop) { clearInterval(loop); loop = null; }
+  try { if (writer) await send('X\n'); } catch(_){}
+  try { if (reader) await reader.cancel(); } catch(_){}
+  try { if (writer) writer.releaseLock(); } catch(_){}
+  try { if (port) await port.close(); } catch(_){}
+  writer = null; reader = null; port = null;
+  $('connect').disabled = false; $('disconnect').disabled = true;
+  connPill.textContent = '未连接串口'; connPill.className = 'pill bad';
+  for (const k in keys) keys[k] = false; paintKeys();
+  log('串口已关闭');
+}
+
+function tick(){
+  if (!writer) return;
+  if (!focusedNow()) { if (anyKey()) stopNow('窗口失去焦点'); else send('X\n'); paintKeys(); return; }
+  const c = currentCmd();
+  if (c.vx || c.vy || c.om) send(`V,${c.vx},${c.vy},${c.om}\n`);
+  else send('X\n');
+}
+
+window.addEventListener('keydown', e=>{
+  const k = e.key.toLowerCase();
+  if (!(k in KEYMAP)) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (!focusedNow()) return;          // 焦点不对时直接忽略
+  keys[k] = true; paintKeys();
+  log('按下 ' + k.toUpperCase());
+});
+window.addEventListener('keyup', e=>{
+  const k = e.key.toLowerCase();
+  if (!(k in KEYMAP)) return;
+  e.preventDefault();
+  if (!keys[k]) return;
+  keys[k] = false; paintKeys();
+  if (!anyKey()) send('X\n');         // 抬起立刻停
+  log('抬起 ' + k.toUpperCase());
+});
+window.addEventListener('blur', ()=> stopNow('窗口失焦'));
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) stopNow('页面隐藏'); });
+setInterval(()=>{ focusPill.textContent = '焦点: ' + (focusedNow() ? '页面' : '其它'); focusPill.className = 'pill ' + (focusedNow() ? 'ok' : 'dim'); }, 200);
+
+$('connect').addEventListener('click', connect);
+$('disconnect').addEventListener('click', disconnect);
+transEl.addEventListener('input', ()=>{ $('tv').textContent = transEl.value; paintKeys(); });
+spinEl.addEventListener('input', ()=>{ $('sv').textContent = spinEl.value; paintKeys(); });
+paintKeys();
+</script>
+</body>
+</html>

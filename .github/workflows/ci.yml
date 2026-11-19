@@ -1,0 +1,20 @@
+name: Offline checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install -r requirements-dev.txt
+      - run: black --check tools
+      - run: clang-format --dry-run --Werror src/*.c include/*.h tests/*.c
+      - run: python -m compileall -q tools
+      - run: bash tools/verify.sh
+      - run: pio run -e cboard_diagnostic
